@@ -106,10 +106,33 @@
                 ]
               },
               {
-                title: '自定义组件',
-                field: 'div',
+                title: '开始时间',
+                field: 'startTime',
                 render: {
                   type: 'input',
+                  props:{
+                    type:'datetime',
+                  },
+                  events:{
+                    change:({value,items})=>{
+                      if(new Date(value) >= new Date(this.form.endTime)){
+                        this.$set(this.form,'endTime',value)
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                title: '结束时间',
+                field: 'endTime',
+                render: {
+                  type: 'input',
+                  props:{
+                    type:'datetime',
+                    disabledMethod:({ date, viewType }) => {
+                      return new Date(date).getTime()<new Date(this.form.startTime).getTime()
+                    }
+                  },
                 }
               },
               {
@@ -123,7 +146,7 @@
             ],
             rules: {
               val3: [
-                { required: true, message: '请输入val3' },
+                { required: true },
               ],
               input1: [
                 { required: true, message: '请输入val23' },

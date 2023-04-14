@@ -13,7 +13,7 @@ const YqForm = {
         // 表单校验规则
         rules:Object,
 
-         // v-model 绑定值，折叠状态 -- 对应表单项的【folding】属性
+         // 折叠状态 -- 对应表单项的【folding】属性
         collapseStatus:{
             type: Boolean,
             default: true
@@ -76,17 +76,19 @@ const YqForm = {
             type: [Boolean,String], // boolean, left (星号在title左边) | right (星号在title右边)
             default: true
         },
-
-
+        // 是否加载中 sync
+        loading:{
+            type:[Boolean,String],
+            defalut:false
+        }
     },
 
     data() {
         return {
-            divFormItems:['input','switch','yzselect'], // 自定义表单组件注册
             formItems: [],
             curSlots: [],  // 过滤出只有renddr插槽的items
             curSlotItems: [], // 过滤出非render的插槽的items
-            formRules:{}
+            formRules:{},
         }
     },
     computed:{
@@ -103,6 +105,16 @@ const YqForm = {
         curItems: {
             get() {
                 return this.$refs.vForm.getItems()
+            }
+        },
+
+        // 是否加载中
+        formLoading:{
+            get() {
+                return this.loading;
+            },
+            set(e){
+                this.$emit('update:loading',e)
             }
         }
     },
@@ -127,71 +139,39 @@ const YqForm = {
         :title-align="titleAlign"
         :title-overflow="titleOverflow"
         :title-asterisk="titleAsterisk"
-
+        @collapse="$emit('collapse',$event)"
         prevent-submit
         >
-        <!-- 输入框 -->
-        <template #_input="{data,item,field}">
-          <vxe-input v-model="data[field]" v-bind="item.slots.props"></vxe-input>
-        </template>
-       
-        <!-- 开关 -->
-        <template #_switch="{data,item,field}">
-            <vxe-switch v-model="data[field]"></vxe-switch>
-        </template>
+      
 
-        <!-- 单选框组 -->
-        <template #_radio="{data,item,field}">
-            <vxe-radio-group v-model="data[field]" v-bind="item.slots.props">
-                <vxe-radio v-bind="opt" v-for="opt in item.slots.options"></vxe-radio>
-            </vxe-radio-group>
-            <vxe-radio v-if="!item.slots.options" v-bind="item.slots.props"  v-model="data[field]" ></vxe-radio>
-        </template>
-
-        <!-- 多选框 -->
-        <template #_checkbox="{data,item,field}">
-            <vxe-checkbox-group v-model="data[field]" v-if="item.slots.options" v-bind="item.slots.props">
-                <vxe-checkbox :label="opt.value" :content="opt.label" v-for="opt in item.slots.options"></vxe-checkbox>
-            </vxe-checkbox-group>
-            <vxe-checkbox v-if="!item.slots.options" v-model="data[field]" ></vxe-checkbox>
-        </template>
-
-        <!-- 下拉框 单选 -->
-        <template #_select="{data,item,field}">
-            <vxe-select v-model="data[field]" v-bind="item.slots.props">
-                <vxe-option :value="opt.value" :label="opt.label" :class-name="opt.className" v-for="opt in item.slots.options"></vxe-option>
-            </vxe-select>
-        </template>
+<!--           自定义组件 start-->
 
 
           <!-- 按钮组 -->
-          <template #_buttons="{data,item,field}">
-            <template v-for="opt in item.slots.options">
+          <template #buttons="{data,item,field}">
+            <template v-for="opt in item.slots.props.options">
                 <!-- 提交按钮 -->
                 <vxe-button v-bind="opt" v-if="['submit'].includes(opt.type)" @click="submit"></vxe-button> 
                 <!-- 重置按钮 -->
                 <vxe-button v-bind="opt" v-if="['reset'].includes(opt.type)" @click="reset"></vxe-button>
 
-                <vxe-button v-bind="opt" v-if="!['submit','reset'].includes(opt.type)"></vxe-button>
+                <vxe-button v-bind="opt" v-if="!['submit','reset'].includes(opt.type)" @click="item.slots.events.click(curItems,type)"></vxe-button>
             </template>
           </template>
 
+            <!-- input类型 -->
+            <template #input="{data,item,field}">
+                 <vxe-input  v-model="data[field]" v-bind="item.slots.props" @change="item.slots.events?.change({value:data[field],items:curItems})"></vxe-input>
+            </template>
 
-
-        <!-- 自定义表单组件 -->
-        <template
-        v-for='(divItem) in divFormItems'
-        #[divItem]="{data,item,field}"
-        >
-                  <!-- input类型 -->
-            <vxe-input v-if="item.slots.default=='input'" v-model="data[field]" v-bind="item.slots.props"></vxe-input>
-
-            <vxe-switch v-if="item.slots.default=='switch'"  v-model="data[field]" v-bind="item.slots.props"></vxe-switch>
-           
+            <template #switch="{data,item,field}">
+                <vxe-switch  v-model="data[field]" v-bind="item.slots.props"></vxe-switch>
+            </template>
             
-       
-        </template>
-          
+
+             
+<!--           自定义组件 end-->
+
 
         <!-- 插槽 -->
         <template
@@ -229,6 +209,7 @@ const YqForm = {
             })
         },
         initformRules(rules={}){
+            
             return rules;
         },
         
@@ -239,7 +220,9 @@ const YqForm = {
                     VXETable.modal.message({content: error[Object.keys(error)[0]][0].rule.$options.message, status: 'warning' ,id: 'unique1'})
                 }else{
                     // 验证成功后的表单提交
-                    this.$emit('submit',JSON.parse(JSON.stringify(this.form)));
+                    const formData = JSON.parse(JSON.stringify(this.form));
+
+                    this.$emit('submit',formData);
                     // 可以在这里进行提交 请求接口 
                 }
             })
@@ -269,8 +252,16 @@ const YqForm = {
         },
         // 获取表单项 通过 field
         getItems(field){
-            return this.$refs.vForm.getItems().find(d=>d.field === field);
+            if(field){
+                return this.curItems.find(d => d.field === field);
+            }else{
+                return this.curItems;
+            }
         },
+        // 只对 collapse-node 有效，手动切换折叠状态
+        toggleCollapse(){
+            this.$refs.vForm.toggleCollapse();
+        }
 
     }
 }
