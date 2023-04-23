@@ -14,7 +14,8 @@
 <body>
   <div id="app" style="height:900px;display:flex">
 
-    <yq-form v-model="form" ref="yqform" v-bind="vForm" @submit="submit" style="width:600px;box-shadow: 0 0 3px #808080;">
+    <yq-form v-model="form" ref="yqform" v-bind="vForm" @submit="submit"
+      style="width:600px;box-shadow: 0 0 3px #808080;">
       <template #switch111="{field,item:{slots}}">
         <vxe-input v-model="form[field]" v-bind="slots.props" @input="slots.events.input"></vxe-input>
       </template>
@@ -27,6 +28,7 @@
   <!-- 引入vue -->
   <script src="./vue.js"></script>
   <!-- 引入组件 -->
+  <script src="./untils/deepClone.js"></script>
   <script src="./xe-utils.js"></script>
   <script src="./vxe-table@legacy.js"></script>
   <script src="./yqformitems.js"></script>
@@ -36,101 +38,54 @@
       el: '#app',
       data() {
         return {
-          form:{
+          form: {
             sex: '1',
           },
           // 表单配置
           vForm: {
             items: [
               {
-                span: 24,
-                children: [
-                  { field: 'sex', title: '性别', span: 8, render: { type: '_select', options: [{ value: '0', label: '女' }, { value: '1', label: '男' }], props: { placeholder: '请选择性别' } } },
-                  { field: 'role', title: '角色', span: 8, render: { type: '_input', props: { placeholder: '请输入角色' } } },
-                  { field: 'age', title: '年龄', span: 24, render: { type: '_input', props: { type: 'number', placeholder: '请输入年龄' } } },
-                  { field: 'val1', title: '复选框-组', span: 12, render: { type: '_checkbox', options: [{ label: '爬山', value: '11' }, { label: '健身', value: '22' }] } },
-                  { field: 'val2', title: '复选框', span: 12, render: { type: '_checkbox' } },
-                  {
-                    field: 'val3', title: '单选框组', span: 12, render: {
-                      type: '_radio',
-                      props: {
-                        strict: false
-                      },
-                      options: [{ content: '爬山', label: '11' }, { content: '健身', label: '22' }]
+                  title:"输入框",
+                  field:"input",
+                  render:{
+                    type:'input',
+                    props:{
+                      maxlength:5
                     }
                   },
-                  {
-                    titlePrefix: { message: '左边图标', icon: 'vxe-icon-question-circle-fill' },
-                    field: 'val23', title: '单选框', span: 12, render: {
-                      type: '_radio',
-                      props: {
-                        strict: false
-                      },
-
-                    }
-
-                  },
-                  {
-                    field: 'switch', title: '开关', span: 24, render: {
-                      type: '_switch',
-                    }
-                  },
-                  { field: 'region', visibleMethod({ data }) { return data.switch }, title: '地区', span: 15, slots: { default: 'myregion' } },
-                  {
-                    title: 'input类型',
-                    field: 'input1',
-                    render: {
-                      type: '_input',
-                      events: {
-                         
-                      }
-                    }
-                  },
-                  {
-                    title: '插槽',
-                    field: 'switch111',
-                    slots: {
-                      default: 'switch111', props: {
-                        style: "color:red",
-                        placeholder: 'xiangnile'
-                      },
-                      events: {
-                        // input: (e) => {
-                        //   console.log(e);
-                        // },
-                      }
-                    },
-
-                  },
-
-                ]
+                  required: true,
               },
               {
                 title: '开始时间',
                 field: 'startTime',
+                required: true,
+                span:12,
                 render: {
                   type: 'input',
-                  props:{
-                    type:'datetime',
+                  props: {
+                    type: 'datetime',
                   },
-                  events:{
-                    change:({value,items})=>{
-                      if(new Date(value) >= new Date(this.form.endTime)){
-                        this.$set(this.form,'endTime',value)
+                  events: {
+                    change: ({value}) => {
+                      if (new Date(value) >= new Date(this.form.endTime)) {
+                        this.$set(this.form, 'endTime', value)
                       }
                     }
                   }
-                }
+                },
+               
               },
               {
                 title: '结束时间',
                 field: 'endTime',
+                span:12,
+                required: true,
                 render: {
                   type: 'input',
-                  props:{
-                    type:'datetime',
-                    disabledMethod:({ date, viewType }) => {
-                      return new Date(date).getTime()<new Date(this.form.startTime).getTime()
+                  props: {
+                    type: 'datetime',
+                    disabledMethod: ({ date, viewType }) => {
+                      return new Date(date).getTime() < new Date(this.form.startTime).getTime()
                     }
                   },
                 }
@@ -142,22 +97,21 @@
                   type: 'switch',
                 }
               },
-              { align: 'center', span: 24, render: { type: '_buttons', options: [{ type: 'submit', content: '提交', status: 'primary' }, { type: 'reset', content: '重置' }] } },
+              {
+                align: 'center', span: 24, 
+                render: {
+                  type: 'buttons', 
+                  props: {
+                    options: [{ type: 'submit', content: '提交', status: 'primary' }, { type: 'reset', content: '重置' }]
+                  }
+                }
+              },
             ],
-            rules: {
-              val3: [
-                { required: true },
-              ],
-              input1: [
-                { required: true, message: '请输入val23' },
-                { max: 14, message: '最大撒打发' }
-              ]
-            }
           }
         }
       },
       created() {
-          
+
       },
       watch: {
       },

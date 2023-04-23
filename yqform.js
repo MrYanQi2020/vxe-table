@@ -10,8 +10,6 @@ const YqForm = {
         items: {
             type: Array,
         },
-        // 表单校验规则
-        rules:Object,
 
          // 折叠状态 -- 对应表单项的【folding】属性
         collapseStatus:{
@@ -46,13 +44,13 @@ const YqForm = {
         // 所有项的标题对齐方式
         titleAlign: {
             type: String,
-            default: 'left'
+            default: 'right'
         },
 
         // 所有项的标题宽度
         titleWidth: {
             type: [String, Number],
-            default: 'auto'
+            default: 120
         },
 
         //是否显示标题冒号
@@ -88,7 +86,7 @@ const YqForm = {
             formItems: [],
             curSlots: [],  // 过滤出只有renddr插槽的items
             curSlotItems: [], // 过滤出非render的插槽的items
-            formRules:{},
+            rules:{},
         }
     },
     computed:{
@@ -128,7 +126,7 @@ const YqForm = {
         ref="vForm"
         :data="form" 
         :items="formItems" 
-        :rules="formRules"
+        :rules="rules"
         :class-name="className"
         :collapseStatus.sync="collapseStatus"
         :size="size"
@@ -142,50 +140,63 @@ const YqForm = {
         @collapse="$emit('collapse',$event)"
         prevent-submit
         >
-      
 
-<!--           自定义组件 start-->
+            <!-- 内置组件 vex的表单组件 或第三方组件（不是组件库） start-->
+
+                     <!-- input类型 -->
+                    <template #input="{data,item,field}">
+                        <vxe-input  v-model="data[field]" v-bind="item.slots.props" @change="item.slots.events?.change({value:data[field]})"></vxe-input>
+                    </template>
+
+                    <template #switch="{data,item,field}">
+                        <vxe-switch  v-model="data[field]" v-bind="item.slots.props"></vxe-switch>
+                    </template>
+
+                    <!-- 按钮组 -->
+                    <template #buttons="{data,item,field}">
+                        <template v-for="opt in item.slots.props.options">
+                            <!-- 提交按钮 -->
+                            <vxe-button v-bind="opt" v-if="['submit'].includes(opt.type)" @click="submit"></vxe-button> 
+                            <!-- 重置按钮 -->
+                            <vxe-button v-bind="opt" v-if="['reset'].includes(opt.type)" @click="reset"></vxe-button>
+
+                            <!-- 其余按钮 -->
+                            <vxe-button v-bind="opt" v-if="!['submit','reset'].includes(opt.type)" @click="item.slots.events.click({value:type})"></vxe-button>
+                        </template>
+                    </template>
 
 
-          <!-- 按钮组 -->
-          <template #buttons="{data,item,field}">
-            <template v-for="opt in item.slots.props.options">
-                <!-- 提交按钮 -->
-                <vxe-button v-bind="opt" v-if="['submit'].includes(opt.type)" @click="submit"></vxe-button> 
-                <!-- 重置按钮 -->
-                <vxe-button v-bind="opt" v-if="['reset'].includes(opt.type)" @click="reset"></vxe-button>
+            <!-- 内置组件 vex的表单组件 或第三方组件（不是组件库） end-->
 
-                <vxe-button v-bind="opt" v-if="!['submit','reset'].includes(opt.type)" @click="item.slots.events.click(curItems,type)"></vxe-button>
+
+
+
+
+<!-- ------------------------------------------------------------------------------------------------------------------------------->
+
+
+
+
+            <!--           自定义组件 - （依赖第三方库或后端的组件） start-->
+
+            <!--           自定义组件 - （依赖第三方库或后端的组件） end-->
+
+
+
+
+
+            <!-- 插槽 传入表单组件 -->
+            <template
+                v-for='(item) in curSlots'
+                #[item.slots.default]="{data,item,field}"
+            >
+                <slot :name="item.slots.default" v-bind="{data,item,field}" ></slot>
             </template>
-          </template>
-
-            <!-- input类型 -->
-            <template #input="{data,item,field}">
-                 <vxe-input  v-model="data[field]" v-bind="item.slots.props" @change="item.slots.events?.change({value:data[field],items:curItems})"></vxe-input>
-            </template>
-
-            <template #switch="{data,item,field}">
-                <vxe-switch  v-model="data[field]" v-bind="item.slots.props"></vxe-switch>
-            </template>
-            
-
-             
-<!--           自定义组件 end-->
-
-
-        <!-- 插槽 -->
-        <template
-            v-for='(item) in curSlots'
-            #[item.slots.default]="{data,item,field}"
-        >
-            <slot :name="item.slots.default" v-bind="{data,item,field}" ></slot>
-        </template>
     </vxe-form>
     `,
     methods: {
         init() {
-            this.formItems = this.initItems(this.items); // 初始化【表单项】
-            this.formRules = this.initformRules(this.rules) // 初始化 【表单验证规则】
+            this.formItems = this.initItems(deepClone(this.items)); // 初始化【表单项】 【表单验证规则】
             this.defaultForm = JSON.parse(JSON.stringify(this.value)); // 初始表单数据 - 用于 重置数据
 
             this.$nextTick(() => {
@@ -197,22 +208,40 @@ const YqForm = {
             })
         },
         initItems(items = []) {
+
             return items.map(d => {
                 const slots = d.slots ? d.slots : d.render ? { default: d.render.type, ...d.render } : null;
                 const children = this.initItems(d.children)
+                const item = deepClone(d);
+                item.rules = d.rules || [];
+
+                if(item.required){
+                    item.rules.push({required:true})
+                }
+
+                if((item.field && item.rules) || item.required){
+
+                    const rules = deepClone(item.rules).map(m=>{
+                        if(m.required){
+                            m.message = `请设置${item.title}`
+                        }
+                        return m
+                    })
+
+                    this.$set(this.rules,item.field,rules)
+                }
+
+                delete item.render
+                delete item.required
+
                 return {
-                    ...d,
+                    ...item,
                     slots,
                     children,
-                    span: d.span
+                    span: item.span
                 }
             })
         },
-        initformRules(rules={}){
-            
-            return rules;
-        },
-        
         // 提交表单数据
         async submit(){
             const res = await this.$refs.vForm.validate((error)=>{
