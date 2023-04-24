@@ -12,18 +12,18 @@
 </head>
 
 <body>
-  <div id="app" style="height:900px;display:flex">
+  <div id="app" >
 
-    <yq-form v-model="form" ref="yqform" v-bind="vForm" @submit="submit"
-      style="width:600px;box-shadow: 0 0 3px #808080;">
+    <div style="height:100px;overflow: auto;">
+      <yq-form v-model="form" ref="yqform" v-bind="vForm" @submit="submit"
+      style="width:600px;box-shadow: 0 0 3px #808080">
       <template #switch111="{field,item:{slots}}">
         <vxe-input v-model="form[field]" v-bind="slots.props" @input="slots.events.input"></vxe-input>
       </template>
       <template #myregion>myregion</template>
     </yq-form>
-    <pre>
-      {{form}}
-    </pre>
+    </div>
+  
   </div>
   <!-- 引入vue -->
   <script src="./vue.js"></script>
@@ -31,7 +31,6 @@
   <script src="./untils/deepClone.js"></script>
   <script src="./xe-utils.js"></script>
   <script src="./vxe-table@legacy.js"></script>
-  <script src="./yqformitems.js"></script>
   <script src="./yqform.js"></script>
   <script>
     var vm = new Vue({
@@ -39,7 +38,7 @@
       data() {
         return {
           form: {
-            sex: '1',
+           
           },
           // 表单配置
           vForm: {
@@ -50,6 +49,7 @@
                   render:{
                     type:'input',
                     props:{
+                      type:'input',
                       maxlength:5
                     }
                   },
@@ -111,13 +111,19 @@
         }
       },
       created() {
-
+          const form = {
+            divSwitch: true
+          }
+          this.form = deepClone(form);
       },
       watch: {
       },
       methods: {
-        submit(form) {
+        submit(form,done) {
           console.log(form);
+          setTimeout(() => {
+            done()
+          }, 1000);
         }
       },
 

@@ -74,11 +74,6 @@ const YqForm = {
             type: [Boolean,String], // boolean, left (星号在title左边) | right (星号在title右边)
             default: true
         },
-        // 是否加载中 sync
-        loading:{
-            type:[Boolean,String],
-            defalut:false
-        }
     },
 
     data() {
@@ -87,17 +82,11 @@ const YqForm = {
             curSlots: [],  // 过滤出只有renddr插槽的items
             curSlotItems: [], // 过滤出非render的插槽的items
             rules:{},
+            form:{},
+            loading:false,
         }
     },
-    computed:{
-        form:{
-            get(){
-                return this.value
-            },
-            set(e){
-                this.$emit('input',e)
-            }
-        },
+    computed:{ 
 
         // 所有表单项
         curItems: {
@@ -106,23 +95,24 @@ const YqForm = {
             }
         },
 
-        // 是否加载中
-        formLoading:{
-            get() {
-                return this.loading;
-            },
-            set(e){
-                this.$emit('update:loading',e)
+    },
+    watch:{
+        form:{
+            deep:true,
+            handler:function(val){
+                this.$emit('input', val) 
             }
         }
     },
     created() {
+ 
     },
     mounted() {
         this.init();
     },
     template:/*html*/`
     <vxe-form 
+        :loading="loading"
         ref="vForm"
         :data="form" 
         :items="formItems" 
@@ -197,14 +187,13 @@ const YqForm = {
     methods: {
         init() {
             this.formItems = this.initItems(deepClone(this.items)); // 初始化【表单项】 【表单验证规则】
-            this.defaultForm = JSON.parse(JSON.stringify(this.value)); // 初始表单数据 - 用于 重置数据
-
+            this.defaultForm = deepClone(this.value); // 初始表单数据 - 用于 重置数据
+            
             this.$nextTick(() => {
-
                 this.curSlotItems = this.curItems.filter(d => d.slots && d.slots.type)
                 this.curSlots = this.curItems.filter(d => d.slots && !d.slots.type)
                 // 表单渲染完成(包含插槽) - 插槽渲染完毕后对 表单数据进行赋值
-                this.form = JSON.parse(JSON.stringify(this.defaultForm));
+                this.form = deepClone(this.value)
             })
         },
         initItems(items = []) {
@@ -215,6 +204,7 @@ const YqForm = {
                 const item = deepClone(d);
                 item.rules = d.rules || [];
 
+                // 处理验证规则
                 if(item.required){
                     item.rules.push({required:true})
                 }
@@ -231,6 +221,7 @@ const YqForm = {
                     this.$set(this.rules,item.field,rules)
                 }
 
+                // 删除非法
                 delete item.render
                 delete item.required
 
@@ -249,16 +240,21 @@ const YqForm = {
                     VXETable.modal.message({content: error[Object.keys(error)[0]][0].rule.$options.message, status: 'warning' ,id: 'unique1'})
                 }else{
                     // 验证成功后的表单提交
-                    const formData = JSON.parse(JSON.stringify(this.form));
+                    const formData = deepClone(this.form);
 
-                    this.$emit('submit',formData);
+                    this.loading = true;
+
+                    this.$emit('submit',formData,()=>{
+
+                        this.loading = false;
+                    });
                     // 可以在这里进行提交 请求接口 
                 }
             })
         },
         // 重置表单数据
         reset(){
-            this.form = JSON.parse(JSON.stringify(this.defaultForm));
+            this.form = deepClone(this.defaultForm);
             this.$emit('input', this.form)
         },
 
